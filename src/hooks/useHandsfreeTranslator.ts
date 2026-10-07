@@ -42,11 +42,11 @@ const SENSITIVITY_THRESHOLDS: Record<Sensitivity, number> = {
   high: -42,
 };
 
-const SILENCE_TIMEOUT_MS = 750; // Silence pause to segment utterance (~750ms)
-const MIN_SPEECH_DURATION_MS = 600; // Min speech duration to ignore clicks/coughs
-const MAX_UTTERANCE_MS = 10000; // Max 10s per segment
-const POLL_INTERVAL_MS = 80;
-const REQUIRED_CONSECUTIVE_FRAMES = 2; // ~160ms of sustained voice energy to filter impulse noise
+const SILENCE_TIMEOUT_MS = 400; // Fast silence cutoff (~400ms) for snappy sentence dispatch
+const MIN_SPEECH_DURATION_MS = 250; // Minimum speech duration to capture short words (>=250ms)
+const MAX_UTTERANCE_MS = 6000; // Auto-chunk after 6s continuous speech for live streaming feel
+const POLL_INTERVAL_MS = 50; // Fast polling (20 checks/sec) for real-time responsiveness
+const REQUIRED_CONSECUTIVE_FRAMES = 2; // ~100ms of sustained voice energy to filter impulse clicks
 
 let segmentCounter = 1;
 
