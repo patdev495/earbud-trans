@@ -1,5 +1,5 @@
 # Issue 04: Audio Visualizer & Connection State Indicator (UI/UX Pro Max Polish)
-Status: ready-for-agent
+Status: done
 
 ## What to build
 

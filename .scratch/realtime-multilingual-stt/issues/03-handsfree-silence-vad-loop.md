@@ -1,5 +1,5 @@
 # Issue 03: Automated Silence VAD Loop (Hands-Free Utterance Segmentation)
-Status: ready-for-agent
+Status: done
 
 ## What to build
 

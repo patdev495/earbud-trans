@@ -1,5 +1,5 @@
 # Issue 05: Bluetooth Earbud Mic Routing Configuration (iOS Native EAS Dev Client)
-Status: ready-for-human
+Status: done
 
 ## What to build
 

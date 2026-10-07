@@ -1,5 +1,5 @@
 # Issue 02: Groq STT Audio Dispatch Tracer (Single Utterance Recognition)
-Status: ready-for-agent
+Status: done
 
 ## What to build
 

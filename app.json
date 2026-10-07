@@ -6,27 +6,38 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0F172A",
+    "backgroundColor": "#090D16",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.patdev.earbudtrans",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "App cần quyền micro để nhận diện giọng nói từ tai nghe của bạn."
+        "NSMicrophoneUsageDescription": "App cần quyền micro để nhận diện giọng nói từ tai nghe của bạn.",
+        "NSBluetoothAlwaysUsageDescription": "App cần kết nối Bluetooth để thu âm giọng nói trực tiếp qua tai nghe không dây.",
+        "NSBluetoothPeripheralUsageDescription": "App cần kết nối Bluetooth để thu âm giọng nói trực tiếp qua tai nghe không dây.",
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0F172A",
+        "backgroundColor": "#090D16",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "permissions": [
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_CONNECT"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-audio"
+    ]
   }
 }

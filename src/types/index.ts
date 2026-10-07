@@ -6,6 +6,9 @@ export interface Utterance {
   language: LanguageCode;
   timestamp: number;
   confidence?: number;
+  latencyMs?: number;
+  durationSec?: number;
+  pinyin?: string;
 }
 
 export interface AudioSessionState {
@@ -13,4 +16,5 @@ export interface AudioSessionState {
   isProcessing: boolean;
   isBluetoothConnected: boolean;
   activeLanguage?: LanguageCode;
+  apiStatus: 'ready' | 'offline' | 'error';
 }
