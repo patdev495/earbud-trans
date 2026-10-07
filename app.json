@@ -21,6 +21,7 @@
       }
     },
     "android": {
+      "package": "com.patdev.earbudtrans",
       "adaptiveIcon": {
         "backgroundColor": "#090D16",
         "foregroundImage": "./assets/android-icon-foreground.png",
