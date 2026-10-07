@@ -12,6 +12,7 @@ interface LiveVisualizerBarProps {
   status: RecordingStatusState;
   errorMessage: string | null;
   audioLevel: number;
+  noiseFloorDb?: number;
   isHandsfreeActive: boolean;
   pendingTasksCount: number;
   onStartManual: () => void;
@@ -84,6 +85,7 @@ export const LiveVisualizerBar: React.FC<LiveVisualizerBarProps> = ({
   status,
   errorMessage,
   audioLevel,
+  noiseFloorDb = -45,
   isHandsfreeActive,
   pendingTasksCount,
   onStartManual,
@@ -165,32 +167,47 @@ export const LiveVisualizerBar: React.FC<LiveVisualizerBarProps> = ({
 
       {/* Noise Gate / Sensitivity Selector (Hands-Free Only) */}
       {mode === 'handsfree' && (
-        <View style={styles.sensitivityContainer}>
-          {(['low', 'medium', 'high'] as Sensitivity[]).map((sensKey) => {
-            const isSelected = sensitivity === sensKey;
-            const cfg = SENSITIVITY_CONFIG[sensKey];
-            return (
-              <TouchableOpacity
-                key={sensKey}
-                onPress={() => setSensitivity(sensKey)}
-                style={[
-                  styles.sensTab,
-                  isSelected && styles.sensTabActive,
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text
+        <>
+          <View style={styles.sensitivityContainer}>
+            {(['low', 'medium', 'high'] as Sensitivity[]).map((sensKey) => {
+              const isSelected = sensitivity === sensKey;
+              const cfg = SENSITIVITY_CONFIG[sensKey];
+              return (
+                <TouchableOpacity
+                  key={sensKey}
+                  onPress={() => setSensitivity(sensKey)}
                   style={[
-                    styles.sensTabText,
-                    isSelected && styles.sensTabTextActive,
+                    styles.sensTab,
+                    isSelected && styles.sensTabActive,
                   ]}
+                  activeOpacity={0.7}
                 >
-                  {cfg.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  <Text
+                    style={[
+                      styles.sensTabText,
+                      isSelected && styles.sensTabTextActive,
+                    ]}
+                  >
+                    {cfg.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Adaptive Noise Floor Live Indicator */}
+          <View style={styles.noiseFloorRow}>
+            <View style={styles.noiseFloorLeft}>
+              <View style={styles.noiseFloorDot} />
+              <Text style={styles.noiseFloorText}>
+                Nền ồn thích ứng: <Text style={styles.noiseFloorVal}>{noiseFloorDb} dB</Text>
+              </Text>
+            </View>
+            <Text style={styles.noiseFloorBadge}>
+              {noiseFloorDb >= -30 ? 'Ồn ào' : noiseFloorDb >= -42 ? 'Bình thường' : 'Yên tĩnh'}
+            </Text>
+          </View>
+        </>
       )}
 
       {/* Status & Live Waveform Card */}
@@ -390,6 +407,41 @@ const styles = StyleSheet.create({
   sensTabTextActive: {
     color: colors.primary,
     fontWeight: '700',
+  },
+  noiseFloorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.18)',
+  },
+  noiseFloorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  noiseFloorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  noiseFloorText: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  noiseFloorVal: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  noiseFloorBadge: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontWeight: '600',
   },
   statusCard: {
     padding: 14,

@@ -25,6 +25,7 @@ interface UseHandsfreeTranslatorResult {
   status: RecordingStatusState;
   errorMessage: string | null;
   audioLevel: number; // 0 to 1 for visualizer
+  noiseFloorDb: number; // Current ambient noise floor in dB
   isHandsfreeActive: boolean;
   pendingTasksCount: number;
   startManualRecording: () => Promise<void>;
@@ -32,15 +33,20 @@ interface UseHandsfreeTranslatorResult {
   toggleHandsfree: () => Promise<void>;
 }
 
-// Sensitivity thresholds (dB):
-// Low (Chống ồn cao): Chỉ nhận giọng nói rõ gần mic (-26dB)
-// Medium (Tiêu chuẩn): Cân bằng (-34dB)
-// High (Nhạy): Bắt cả giọng nói nhỏ / phòng yên tĩnh (-42dB)
-const SENSITIVITY_THRESHOLDS: Record<Sensitivity, number> = {
-  low: -26,
-  medium: -34,
-  high: -42,
+// Dynamic margins above adaptive ambient noise floor:
+// Low (Chống ồn cao): Giọng nói phải vượt +12dB so với nền ồn
+// Medium (Tiêu chuẩn): Giọng nói vượt +8dB so với nền ồn
+// High (Nhạy): Giọng nói vượt +5dB so với nền ồn
+const SENSITIVITY_MARGINS: Record<Sensitivity, number> = {
+  low: 12,
+  medium: 8,
+  high: 5,
 };
+
+const NOISE_FLOOR_DEFAULT_DB = -45;
+const NOISE_FLOOR_MIN_DB = -55;
+const NOISE_FLOOR_MAX_DB = -20;
+const NOISE_SMOOTHING_ALPHA = 0.05; // Smooth exponential moving average (EMA)
 
 const SILENCE_TIMEOUT_MS = 400; // Fast silence cutoff (~400ms) for snappy sentence dispatch
 const MIN_SPEECH_DURATION_MS = 250; // Minimum speech duration to capture short words (>=250ms)
@@ -84,6 +90,7 @@ export function useHandsfreeTranslator({ onNewUtterance }: UseHandsfreeTranslato
   const [status, setStatus] = useState<RecordingStatusState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [noiseFloorDb, setNoiseFloorDb] = useState<number>(NOISE_FLOOR_DEFAULT_DB);
   const [isHandsfreeActive, setIsHandsfreeActive] = useState<boolean>(false);
   const [pendingTasksCount, setPendingTasksCount] = useState<number>(0);
 
@@ -95,7 +102,10 @@ export function useHandsfreeTranslator({ onNewUtterance }: UseHandsfreeTranslato
   const sensitivityRef = useRef(sensitivity);
   sensitivityRef.current = sensitivity;
 
-  // VAD state trackers
+  // Adaptive noise tracking & VAD state trackers
+  const noiseFloorRef = useRef<number>(NOISE_FLOOR_DEFAULT_DB);
+  const minDbRef = useRef<number>(0);
+  const maxDbRef = useRef<number>(-100);
   const speechStartedAtRef = useRef<number | null>(null);
   const lastSpeechAtRef = useRef<number | null>(null);
   const segmentStartedAtRef = useRef<number>(0);
@@ -162,6 +172,8 @@ export function useHandsfreeTranslator({ onNewUtterance }: UseHandsfreeTranslato
       speechStartedAtRef.current = null;
       lastSpeechAtRef.current = null;
       consecutiveVoiceFramesRef.current = 0;
+      minDbRef.current = 0;
+      maxDbRef.current = -100;
       return recorder;
     } catch (err) {
       console.error('Failed to create recorder:', err);
@@ -201,7 +213,7 @@ export function useHandsfreeTranslator({ onNewUtterance }: UseHandsfreeTranslato
     }
   };
 
-  // Smart VAD Loop with Continuous Energy Verification
+  // Dynamic Adaptive VAD Loop with Continuous Energy Verification
   const vadTick = useCallback(async () => {
     const recorder = activeRecorderRef.current;
     if (!recorder || !recorder.isRecording) return;
@@ -211,10 +223,29 @@ export function useHandsfreeTranslator({ onNewUtterance }: UseHandsfreeTranslato
     const normLevel = normalizeDb(db);
     setAudioLevel(normLevel);
 
-    const threshold = SENSITIVITY_THRESHOLDS[sensitivityRef.current];
+    const validDb = db !== undefined && !isNaN(db) ? db : -60;
+
+    // Track dynamic range during speech vs adapt baseline during silence
+    if (speechStartedAtRef.current) {
+      if (validDb < minDbRef.current) minDbRef.current = validDb;
+      if (validDb > maxDbRef.current) maxDbRef.current = validDb;
+    } else {
+      // Continuously adapt ambient noise floor when not speaking
+      const currentNoiseFloor = noiseFloorRef.current;
+      // If sound is within plausible ambient fluctuation (+6dB above noise floor)
+      if (validDb < currentNoiseFloor + 6) {
+        const nextNoiseFloor = currentNoiseFloor * (1 - NOISE_SMOOTHING_ALPHA) + validDb * NOISE_SMOOTHING_ALPHA;
+        const clampedNoiseFloor = Math.max(NOISE_FLOOR_MIN_DB, Math.min(NOISE_FLOOR_MAX_DB, nextNoiseFloor));
+        noiseFloorRef.current = clampedNoiseFloor;
+        setNoiseFloorDb(Math.round(clampedNoiseFloor));
+      }
+    }
+
+    // Dynamic activation threshold adapted to current ambient noise
+    const dynamicThreshold = noiseFloorRef.current + SENSITIVITY_MARGINS[sensitivityRef.current];
     const now = Date.now();
     const duration = now - segmentStartedAtRef.current;
-    const isLevelAbove = db !== undefined && db >= threshold;
+    const isLevelAbove = validDb >= dynamicThreshold;
 
     if (isLevelAbove) {
       consecutiveVoiceFramesRef.current += 1;
@@ -223,6 +254,8 @@ export function useHandsfreeTranslator({ onNewUtterance }: UseHandsfreeTranslato
       if (consecutiveVoiceFramesRef.current >= REQUIRED_CONSECUTIVE_FRAMES) {
         if (!speechStartedAtRef.current) {
           speechStartedAtRef.current = now;
+          minDbRef.current = validDb;
+          maxDbRef.current = validDb;
         }
         lastSpeechAtRef.current = now;
         setStatus('speaking');
@@ -235,11 +268,15 @@ export function useHandsfreeTranslator({ onNewUtterance }: UseHandsfreeTranslato
         const totalSpeechDuration = lastSpeechAtRef.current ? lastSpeechAtRef.current - speechStartedAtRef.current : 0;
 
         if (silenceDuration >= SILENCE_TIMEOUT_MS) {
-          if (totalSpeechDuration >= MIN_SPEECH_DURATION_MS) {
+          const dynamicRange = maxDbRef.current - minDbRef.current;
+          // Filter out flat monotonic drone noise (< 3.5dB range on long sounds)
+          const hasVocalInflection = totalSpeechDuration < 800 || dynamicRange >= 3.5;
+
+          if (totalSpeechDuration >= MIN_SPEECH_DURATION_MS && hasVocalInflection) {
             setStatus('listening');
             await cycleSegment(true);
           } else {
-            // Impulse click / brief sound -> reset without dispatching
+            // Monotonic noise or sub-threshold click -> reset without dispatching
             setStatus('listening');
             await cycleSegment(false);
           }
@@ -357,6 +394,7 @@ export function useHandsfreeTranslator({ onNewUtterance }: UseHandsfreeTranslato
     status,
     errorMessage,
     audioLevel,
+    noiseFloorDb,
     isHandsfreeActive,
     pendingTasksCount,
     startManualRecording,

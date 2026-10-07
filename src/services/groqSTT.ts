@@ -70,6 +70,8 @@ export async function transcribeAudio(audioUri: string): Promise<STTResult> {
     parameters: {
       model: 'whisper-large-v3',
       response_format: 'verbose_json',
+      temperature: '0',
+      prompt: 'Hội thoại giao tiếp hàng ngày bằng tiếng Việt, tiếng Anh, hoặc tiếng Trung Quốc (日常对话, Daily conversation).',
     },
     headers: {
       Authorization: `Bearer ${GROQ_API_KEY}`,

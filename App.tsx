@@ -55,6 +55,7 @@ export default function App() {
     status,
     errorMessage,
     audioLevel,
+    noiseFloorDb,
     isHandsfreeActive,
     pendingTasksCount,
     startManualRecording,
@@ -149,6 +150,7 @@ export default function App() {
             status={status}
             errorMessage={errorMessage}
             audioLevel={audioLevel}
+            noiseFloorDb={noiseFloorDb}
             isHandsfreeActive={isHandsfreeActive}
             pendingTasksCount={pendingTasksCount}
             onStartManual={startManualRecording}
