@@ -16,7 +16,8 @@
         "NSBluetoothPeripheralUsageDescription": "App cần kết nối Bluetooth để thu âm giọng nói trực tiếp qua tai nghe không dây.",
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -30,7 +31,10 @@
         "RECORD_AUDIO",
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",
-        "BLUETOOTH_CONNECT"
+        "BLUETOOTH_CONNECT",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -38,6 +42,17 @@
     },
     "plugins": [
       "expo-audio"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c86f0c5d-2c57-4a37-8ba6-73bcb6ff0095"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c86f0c5d-2c57-4a37-8ba6-73bcb6ff0095"
+    }
   }
 }
